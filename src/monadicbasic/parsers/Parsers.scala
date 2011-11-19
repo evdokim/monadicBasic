@@ -1,8 +1,14 @@
 package monadicbasic.parsers
 
-sealed abstract class ParseResult[+T];
-  case class Success[T](result: T, next: List[Char]) extends ParseResult[T]
-  case class Failure(msg: String) extends ParseResult[Nothing]
+sealed abstract class ParseResult[+T] {
+  def map[U] (f: T=>U) = 
+    this match {
+      case Success(pRes, pRem) =>  new Success(f(pRes), pRem)
+      case Failure(s) => new Failure(s)
+    }  
+}
+case class Success[T](result: T, next: List[Char]) extends ParseResult[T]
+case class Failure(msg: String) extends ParseResult[Nothing]
 
 trait Parser[+T] extends (List[Char]=>ParseResult[T]) { p =>
   def flatMap[U] (f: T=>Parser[U]) = new Parser[U] {
@@ -45,7 +51,9 @@ trait Parser[+T] extends (List[Char]=>ParseResult[T]) { p =>
   
 
   //TODO companion object Parser ????
-  def rep:Parser[List[T]] = (for {head <- p; tail <- p.rep} yield head :: tail) | p.map(List(_))      
+  def repPos:Parser[List[T]] = (for {head <- p; tail <- p.rep} yield head :: tail) | p.map(List(_))    
+  
+  def rep:Parser[List[T]] = (for {head <- p; tail <- p.rep} yield head :: tail) | Parser.unit(List())   
   
 }
 

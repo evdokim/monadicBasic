@@ -2,10 +2,37 @@ package monadicbasic.parsers
 
 import monadicbasic.CharUtils
 
-sealed abstract class Expression
-  case class Add(e1:Expression, e2:Expression) extends Expression
-  case class Mult(e1:Expression, e2:Expression) extends Expression
-  case class NumberLiteral(value:Int) extends Expression
+sealed abstract class Expression {
+  def eval(env: Map[String, Int]):Int
+}
+
+case class Add(e1:Expression, e2:Expression) extends Expression {
+  override def eval(env: Map[String, Int]) = e1.eval(env) + e2.eval(env)
+}
+
+case class Sub(e1:Expression, e2:Expression) extends Expression {
+  override def eval(env: Map[String, Int]) = e1.eval(env) - e2.eval(env)
+}
+
+case class Opp(e:Expression) extends Expression {
+  override def eval(env: Map[String, Int]) = -e.eval(env)
+}
+
+case class Mult(e1:Expression, e2:Expression) extends Expression {
+  override def eval(env: Map[String, Int]) = e1.eval(env) * e2.eval(env)
+}
+
+case class Div(e1:Expression, e2:Expression) extends Expression {
+  override def eval(env: Map[String, Int]) = e1.eval(env) / e2.eval(env)
+}
+
+case class Var(name:String) extends Expression {
+  override def eval(env: Map[String, Int]) = {println(name) ; env(name)}
+}
+
+case class NumberLiteral(value:Int) extends Expression {
+  override def eval(env: Map[String, Int]) = value
+}
 
 object BasicParsers {
   def satisfy (pred:Char => Boolean, exp: String) = new Parser[Char] {
@@ -32,15 +59,21 @@ object BasicParsers {
 
   def literal(s:String):Parser[String] = literal(s.toList).map(CharUtils.charsToString(_))
 
-  def expr:Parser[Expression] = add | term
+  def expr:Parser[Expression] = add | sub | term
 
   def add = for {
               e1 <- term
               _  <- literal("+")
               e2 <- term  
-            } yield new Add(e1, e2) 
-
-  def term = mult | factor
+            } yield new Add(e1, e2)
+ 
+  def sub = for {
+              e1 <- term
+              _  <- literal("-")
+              e2 <- term  
+            } yield new Sub(e1, e2)
+  
+  def term = mult | div | factor
 
   def mult = for {
                e1 <- factor
@@ -48,7 +81,20 @@ object BasicParsers {
                e2 <- factor  
              } yield new Mult(e1, e2)
 
-  def factor = between | number
+  def div = for {
+               e1 <- factor
+                _ <- literal("/")
+               e2 <- factor  
+             } yield new Div(e1, e2)
+
+  def factor = oppValue | value
+
+  def oppValue = for {
+               _ <- literal("-")
+               e <- value  
+             } yield new Opp(e)
+
+  def value = between | number | variable
 
   def between = for {
                   _ <- literal("(")
@@ -59,6 +105,17 @@ object BasicParsers {
   def digit = satisfy(CharUtils.isDigit(_), "digit")
     
   def number = for {
-              digits <- digit.rep
+              digits <- digit.repPos
             } yield new NumberLiteral(CharUtils.charsToString(digits).toInt)
+
+  def letter = satisfy(CharUtils.isLetter(_), "letter")
+  
+  def id = for {
+             r <- letter ~ (letter | digit).rep
+           } yield CharUtils.charsToString(r._1 :: r._2)
+
+  def variable = for {
+                   name <-id
+                 } yield new Var(name)
+  
 }
