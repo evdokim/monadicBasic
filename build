@@ -1,1 +1,1 @@
-scalac -deprecation -d out/ src/monadicbasic/*.scala src/monadicbasic/parsers/*.scala
+scalac -deprecation -unchecked -d out/ src/monadicbasic/*.scala src/monadicbasic/parsers/*.scala

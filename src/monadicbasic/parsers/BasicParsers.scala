@@ -27,11 +27,32 @@ case class Div(e1:Expression, e2:Expression) extends Expression {
 }
 
 case class Var(name:String) extends Expression {
-  override def eval(env: Map[String, Int]) = {println(name) ; env(name)}
+  override def eval(env: Map[String, Int]) = env(name)
 }
 
 case class NumberLiteral(value:Int) extends Expression {
   override def eval(env: Map[String, Int]) = value
+}
+
+sealed abstract class Statement {
+  def execute(env: Map[String, Int]): Map[String, Int]
+}
+
+
+//TODO: side-effect expressions???
+// case class ExpressionStatement(e:Expression) extends Statement {
+//   override def execute(env: Map[String, Int]): Map[String, Int] = env
+// }
+
+case class PrintStatement(e:Expression) extends Statement{
+  override def execute(env: Map[String, Int]): Map[String, Int] = {
+    println(e.eval(env))
+    env
+  }
+}
+
+case class AssigmentStatement(name:String, e:Expression) extends Statement {
+  override def execute(env: Map[String, Int]): Map[String, Int] = env + (name -> e.eval(env))
 }
 
 object BasicParsers {
@@ -58,6 +79,22 @@ object BasicParsers {
     }
 
   def literal(s:String):Parser[String] = literal(s.toList).map(CharUtils.charsToString(_))
+  //TODO: add optional to statement
+  def statements = (statement ~ statementSeparator).map(_._1).rep
+
+  def statementSeparator = literal("\n")
+
+  def statement:Parser[Statement] = printStatement | assignStatement
+  def printStatement = for {
+                         _ <- literal("PRINT ")
+                         e <- expr
+                       } yield new PrintStatement(e)
+
+  def assignStatement = for {
+                         name <- id
+                            _ <- literal("=")
+                            e <- expr
+                       } yield new AssigmentStatement(name, e)
 
   def expr:Parser[Expression] = add | sub | term
 
