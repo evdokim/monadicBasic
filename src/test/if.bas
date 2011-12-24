@@ -1,0 +1,6 @@
+FOR I = 1 TO 4
+IF I=4 THEN
+PRINT I
+END IF
+NEXT I
+
