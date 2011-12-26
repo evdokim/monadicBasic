@@ -7,13 +7,21 @@ class Compiler {
     private var labelCounter = 0;
 
 	def compile(statement: Statement):List[Op] = statement match {
-        case LabeledStatement(labelName, statement) => LabelOp(labelName) +: compile(statement)
+    case LabelStatement(labelName) => List(LabelOp(labelName))
 		case BlockStatement(statements) => statements.flatMap(compile(_)) 
 		case PrintStatement(expr) => List(PrintOp(expr))
         case InputStatement(name) => List(InputOp(name))
         case GotoStatement(labelName) => List(JumpOp(labelName))
 		case AssigmentStatement(name, expr) => List(AssigmentOp(name, expr))
-		case ForStatement (body, name, fromExpr, toExpr) => {            
+    case AssigmentArrayStatement(name, index, expr) => 
+        List(AssigmentArrayOp(name, index, expr))
+    case DefStatement(varName, typeName, sizeExprOpt) => sizeExprOpt match {
+      case Some(sizeExpr) => List(ArrayDefOp(varName, typeName, sizeExpr))
+      case None => List(VarDefOp(varName, typeName))
+    }
+
+		case ForStatement (body, name, (fromExpr, toExpr)) => {  
+                
 			val beginLoopLabelName = "#loopBegin_" + labelCounter
             val endLoopLabelName = "#loopEnd_" + labelCounter
             labelCounter += 1
@@ -22,7 +30,7 @@ class Compiler {
               LabelOp(beginLoopLabelName),
               JumpIfOp(Greater(Var(name), toExpr), endLoopLabelName)
             ) ++
-            compile(body) ++            
+            compile(body) ++
             List(
               AssigmentOp(name, Add(Var(name), NumberLiteral(1))),
               JumpOp(beginLoopLabelName),

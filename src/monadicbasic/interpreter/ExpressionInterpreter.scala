@@ -54,7 +54,8 @@ object ExpressionInterpreter {
 		    case (e @ Error(s), _) => e
 		    case (_, e @ Error(s)) => e
 		    case (IntValue(v1), IntValue(v2)) => new IntValue(v1 + v2)
-		    case (StringValue(v1), StringValue(v2)) => new StringValue(v1 + v2)
+		    case (StringValue(v1), v2) => new StringValue(v1 + v2.toString)
+		    case (v1, StringValue(v2)) => new StringValue(v1.toString + v2)
 		    case _ => new Error("type error")
 		  
 		}
@@ -87,16 +88,28 @@ object ExpressionInterpreter {
 		    case _ => new Error("type error")
 		}
 
-		case Var(name) => {
-		   if (env.containsKey(name)) {
-		      env.get(name)
-		    } else {
-		      Error("undefined variable: " + name + "!")
-		    }
+		case Var(name) => env.get(name) match {
+			case value:Value => value
+			case _ => Error("undefined variable: " + name + "!")
+		}
 		  
+		case ArrayVar(name, indexExpr) => env.get(name) match {
+			case ArrayValue(array, _) => eval(indexExpr, env) match {
+				case IntValue(index) =>
+				  if (index>0 && index<=array.size)
+			        array(index - 1)  
+			      else
+			        Error("out of bound")
+			    case e @ Error(_) => e
+			    case _ => Error("type error")
+			}
+
+			case _ => Error("undefined variable: " + name + "!")
 		}
 
 		case NumberLiteral(value) => IntValue(value)
+		case StringLiteral(value) => StringValue(value)
+		case BooleanLiteral(value) => BooleanValue(value)
 		
 
 

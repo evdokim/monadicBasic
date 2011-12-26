@@ -7,6 +7,7 @@ import monadicbasic.interpreter._;
 
 object Main {
   def main(args:Array[String]) = {
+    println("begin")
       val sc = new Scanner(System.in);
       val in  = new StringBuilder();
       while(sc.hasNext) {
