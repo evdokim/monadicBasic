@@ -3,7 +3,7 @@ import monadicbasic._
 
 object BasicParsers {
 
-  def id = new Parser[String] {
+  def id = new Parser[(String, Pos)] {
     val keyWords = Set("for", "to", "next", "input", "print", "if", "end", "then", "while", 
                        "dim", "as", "integer", "string", "boolean")
     def apply (in:List[(Token, Pos)]) = in match {
@@ -11,20 +11,31 @@ object BasicParsers {
         case (head @ (WordToken(s), _)) :: tail if keyWords.contains(s) => 
                      Failure("at line: " + head._2.line + " column: " + head._2.column +
                      " " + s + " is key word") 
-        case (head @ (WordToken(s), _)) :: tail => Success(s, tail) 
+        case (head @ (WordToken(s), pos)) :: tail => Success((s, pos), tail) 
         case head :: tail => Failure("at line: " + head._2.line + " column: " + head._2.column +
                        " expected: id found: " + head._1)
       }
   }
 
-  def string(s:String) = new Parser[String] {
+  def string(s:String) = new Parser[Pos] {
     def apply (in:List[(Token, Pos)]) = in match {
         case Nil => Failure("expected: " + s + " eof found")
-        case (head @ (WordToken(w), _)) :: tail if w==s => Success(w, tail) 
+        case (head @ (WordToken(w), pos)) :: tail if w==s => Success(pos, tail) 
         case head :: tail => Failure("at line: " + head._2.line + " column: " + head._2.column +
                        " expected: " + s + " found: " + head._1)
       }
   }
+
+  def stringString(s:String) = new Parser[String] {
+    def apply (in:List[(Token, Pos)]) = in match {
+        case Nil => Failure("expected: " + s + " eof found")
+        case (head @ (WordToken(w), pos)) :: tail if w==s => Success(w, tail) 
+        case head :: tail => Failure("at line: " + head._2.line + " column: " + head._2.column +
+                       " expected: " + s + " found: " + head._1)
+      }
+  }
+
+  // def string(s:String):Parser[String] = stringWithPos(s).map({sp => sp._1})
   
   def number = new Parser[Int] {
     def apply (in:List[(Token, Pos)]) = in match {
@@ -64,11 +75,11 @@ object BasicParsers {
   } yield e
 
   def varriable = for {
-    name <- id
+    namePos <- id
        e <- between.opt
-  } yield Var(name, e)
+  } yield Var(namePos._1, e, namePos._2)
   
-  def booleanLiteral = (string("true") || string("false")).map({
+  def booleanLiteral = (stringString("true") || stringString("false")).map({
     s => BooleanLiteral(s.toBoolean)
   })
 
@@ -80,39 +91,39 @@ object BasicParsers {
   def expr1 = neg || expr0
 
   def neg = for {
-    _ <- string("-")
-    e <- expr0  
-  } yield Neg(e)
+    pos <- string("-")
+           e <- expr0  
+  } yield Neg(e, pos)
 
   //priority 2 
   def expr2 = mult | div | expr1
 
   def mult:Parser[Expression] = for {
     e1 <- expr1
-     _ <- string("*")
+     pos <- string("*")
     e2 <- expr2  
-  } yield Mult(e1, e2)
+  } yield Mult(e1, e2, pos)
 
   def div:Parser[Expression] = for {
     e1 <- expr1
-     _ <- string("/")
+     pos <- string("/")
     e2 <- expr2  
-  } yield Div(e1, e2)
+  } yield Div(e1, e2, pos)
 
   //priority 3
   def expr3 = add | sub | expr2
 
   def add:Parser[Expression] = for {
     e1 <- expr2
-     _ <- string("+")
+     pos <- string("+")
     e2 <- expr3  
-  } yield Add(e1, e2)
+  } yield Add(e1, e2, pos)
  
   def sub:Parser[Expression] = for {
     e1 <- expr2
-    _  <- string("-")
+    pos  <- string("-")
     e2 <- expr3  
-  } yield Sub(e1, e2)
+  } yield Sub(e1, e2, pos)
 
 
   //priority 4
@@ -120,39 +131,39 @@ object BasicParsers {
 
   def less:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string("<")
+     pos <- string("<")
     e2 <- expr4
-  } yield Less(e1, e2)
+  } yield Less(e1, e2, pos)
 
   def le:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string("<=")
+     pos <- string("<=")
     e2 <- expr4
-  } yield LE(e1, e2)
+  } yield LE(e1, e2, pos)
 
   def greater:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string(">")
+     pos <- string(">")
     e2 <- expr4
-  } yield Greater(e1, e2)
+  } yield Greater(e1, e2, pos)
 
   def ge:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string(">=")
+     pos <- string(">=")
     e2 <- expr4
-  } yield GE(e1, e2)
+  } yield GE(e1, e2, pos)
 
   def eq:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string("=")
+     pos <- string("=")
     e2 <- expr4
-  } yield Equal(e1, e2)
+  } yield Equal(e1, e2, pos)
 
   def ne:Parser[Expression] = for {
     e1 <- expr3
-     _ <- string("<>")
+     pos <- string("<>")
     e2 <- expr4
-  } yield NotEqual(e1, e2)
+  } yield NotEqual(e1, e2, pos)
 
   def expr:Parser[Expression] = expr4
 
@@ -162,12 +173,12 @@ object BasicParsers {
                                     gotoStatement || labelStatement
   
   def defStatement = for {
-            _ <- string("dim")
-         name <- id
+            pos <- string("dim")
+         namePos <- id
     arraySize <- between.opt
             _ <- string("as")
-     typeName <- string("string") | string("boolean") || string("integer")
-  } yield DefStatement(name, typeName, arraySize)
+     typeName <- stringString("string") | stringString("boolean") || stringString("integer")
+  } yield DefStatement(namePos._1, typeName, arraySize, pos)
 
   def printStatement = for {
     _ <- string("print")
@@ -175,25 +186,25 @@ object BasicParsers {
   } yield PrintStatement(e)
 
   def inputStatement = for {
-       _ <- string("input")
-    name <- id
-  } yield InputStatement(name)                     
+        pos <- string("input")
+    namePos <- id
+  } yield InputStatement(namePos._1, pos)                     
 
   def gotoStatement = for {
-    _ <- string("goto")
-    n <- number
-  } yield GotoStatement(n.toString)
+    pos <- string("goto")
+     n <- number
+  } yield GotoStatement(n.toString, pos)
 
   def assignStatement = for {
-     name <- id
-    index <- between.opt
-        _ <- string("=")
-        e <- expr
-  } yield AssigmentStatement(name, index, e)
+    namePos <- id
+      index <- between.opt
+        pos <- string("=")
+          e <- expr
+  } yield AssigmentStatement(namePos._1, index, e, pos)
   
   def forStatement = for {
-       _ <- string("for")
-    name <- id
+        pos <- string("for")
+    namePos <- id
        _ <- string("=")
     from <- expr
        _ <- string("to") 
@@ -201,15 +212,15 @@ object BasicParsers {
        _ <- endOfStatement
     body <- blockStatement
        _ <- string("next") 
-  } yield ForStatement(body, name, (from, to))
+  } yield ForStatement(body, namePos._1, (from, to), pos)
   
 
   def ifStatement = for {
-       _ <- string("if")
+       pos <- string("if")
     cond <- expr
        _ <- string("then")
-    stmt <- ifBlock || statement   
-  } yield IfStatement(cond, stmt)
+    stat <- ifBlock || statement   
+  } yield IfStatement(cond, stat, pos)
 
   def ifBlock = for {
        _ <- endOfStatement

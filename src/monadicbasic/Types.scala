@@ -30,16 +30,16 @@ case class Error(message:String) extends Value {
 
 
 object Types {
-	def getDefaultValue(typeName: String):Value = typeName match {
+	def getDefaultValue(typeName: String, pos:Pos):Value = typeName match {
 		case "integer" => IntValue(0)
 		case "string" => StringValue("")
 		case "boolean" => BooleanValue(true)
-		case s => Error("unsupported type: " + s)
+		case s => Error("type error: " + "at " + pos + " unsupported type: " + s)
 	}
 
-	def getDefaultArrayValue(typeName:String, size:Int) =
+	def getDefaultArrayValue(typeName:String, size:Int, pos:Pos) =
 		ArrayValue(
-			new Array[Value](size).map({_ => getDefaultValue(typeName)}),
+			new Array[Value](size).map({_ => getDefaultValue(typeName, pos)}),
 			typeName
 		)
 }

@@ -1,5 +1,5 @@
 DIM n AS Integer
-n = 100
+n = 1000
 
 DIM res(n) AS Boolean
 
@@ -18,7 +18,6 @@ PRINT res
 
 FOR i =2 TO n
   IF res(i) THEN PRINT i
-  n = "df"
 NEXT
 
 

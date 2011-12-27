@@ -1,6 +1,8 @@
 package monadicbasic
 
-case class Pos(line:Int, column: Int)
+case class Pos(line:Int, column: Int) {
+	override def toString = "line=" + line + " column=" + column
+}
 
 abstract sealed class Token
   case class WordToken(s:String) extends Token
