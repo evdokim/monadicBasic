@@ -18,6 +18,7 @@ PRINT res
 
 FOR i =2 TO n
   IF res(i) THEN PRINT i
+  n = "df"
 NEXT
 
 

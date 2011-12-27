@@ -88,12 +88,12 @@ object ExpressionInterpreter {
 		    case _ => new Error("type error")
 		}
 
-		case Var(name) => env.get(name) match {
+		case Var(name, None) => env.get(name) match {
 			case value:Value => value
 			case _ => Error("undefined variable: " + name + "!")
 		}
 		  
-		case ArrayVar(name, indexExpr) => env.get(name) match {
+		case Var(name, Some(indexExpr)) => env.get(name) match {
 			case ArrayValue(array, _) => eval(indexExpr, env) match {
 				case IntValue(index) =>
 				  if (index>0 && index<=array.size)
