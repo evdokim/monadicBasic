@@ -29,6 +29,9 @@ sealed abstract class Statement
 
   case class ForStatement (body: Statement, name: String, 
     bounds: (Expression, Expression), pos:Pos) extends Statement
-  case class IfStatement (codition:Expression, body:Statement, pos:Pos) extends Statement
+  case class IfStatement (codition:Expression, body:Statement, 
+           alt:Option[Statement], pos:Pos) extends Statement
+  case class WhileStatement(codition:Expression, 
+                         body:Statement, pos:Pos) extends Statement 
   case class GotoStatement (label: String, pos:Pos) extends Statement
 

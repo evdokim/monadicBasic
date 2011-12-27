@@ -41,12 +41,42 @@ object Translator {
          LabelOp(endLoopLabelName)
        )
     }
-        case IfStatement(codition, body, pos) => {
+        
+        case IfStatement(codition, body, None, pos) => {
             val endIfLabelName = "#ifEnd_" + labelCounter
             labelCounter += 1
             List(JumpIfNotOp(codition, endIfLabelName, pos)) ++
             translate(body) :+
             LabelOp(endIfLabelName)
+        }
+
+        case IfStatement(codition, body, Some(alt), pos) => {
+            val beginElseLabelName = "#elseBegin_" + labelCounter
+            val endIfLabelName = "#ifEnd_" + labelCounter
+            labelCounter += 1
+            List(JumpIfNotOp(codition, beginElseLabelName, pos)) ++
+            translate(body) ++
+            List(
+              JumpOp(endIfLabelName, pos),
+              LabelOp(beginElseLabelName)
+            ) ++
+            translate(alt) :+
+            LabelOp(endIfLabelName)
+        }
+
+        case WhileStatement(condition, body, pos) => {
+            val beginWhileLabelName = "#whileBegin_" + labelCounter
+            val endWhileLabelName = "#whileEnd_" + labelCounter
+            labelCounter += 1
+            List(
+              LabelOp(beginWhileLabelName),
+              JumpIfNotOp(condition, endWhileLabelName, pos)
+            ) ++
+            translate(body) ++
+            List(
+              JumpOp(beginWhileLabelName, pos),
+              LabelOp(endWhileLabelName)
+            )
         }
   }
 }

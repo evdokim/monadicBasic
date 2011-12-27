@@ -4,8 +4,8 @@ import monadicbasic._
 object BasicParsers {
 
   def id = new Parser[(String, Pos)] {
-    val keyWords = Set("for", "to", "next", "input", "print", "if", "end", "then", "while", 
-                       "dim", "as", "integer", "string", "boolean")
+    val keyWords = Set("for", "to", "next", "input", "print", "if", "end", "then", 
+    "else", "while", "do", "loop", "goto", "dim", "as", "integer", "string", "boolean")
     def apply (in:List[(Token, Pos)]) = in match {
         case Nil => Failure("expected: id eof found")
         case (head @ (WordToken(s), _)) :: tail if keyWords.contains(s) => 
@@ -169,7 +169,8 @@ object BasicParsers {
 
   //statements
   def statement:Parser[Statement] = defStatement || forStatement || ifStatement || 
-                                    printStatement || assignStatement || inputStatement ||
+                                    printStatement || assignStatement || 
+                                    inputStatement || whileStatement ||
                                     gotoStatement || labelStatement
   
   def defStatement = for {
@@ -219,15 +220,28 @@ object BasicParsers {
        pos <- string("if")
     cond <- expr
        _ <- string("then")
-    stat <- ifBlock || statement   
-  } yield IfStatement(cond, stat, pos)
-
-  def ifBlock = for {
        _ <- endOfStatement
     body <- blockStatement
+     alt <- elseBlock.opt
        _ <- string("end")
-       _ <- string("if")
-  } yield body
+       _ <- string("if")         
+  } yield IfStatement(cond, body, alt, pos)
+
+
+  def whileStatement = for {
+       pos <- string("do")
+       _ <- string("while")
+      cond <- expr
+        _ <- endOfStatement
+    body <- blockStatement
+     _ <- string("loop")
+  } yield WhileStatement(cond, body, pos)
+
+  def elseBlock = for {
+       _ <- string("else")
+       _ <- endOfStatement
+    alt <- blockStatement    
+  } yield alt
 
   def labelStatement = for {
     labelName <- number

@@ -1,5 +1,5 @@
 DIM n AS Integer
-n = 1000
+n = 100
 
 DIM res(n) AS Boolean
 
@@ -16,9 +16,17 @@ NEXT
 
 PRINT res
 
-FOR i =2 TO n
-  IF res(i) THEN PRINT i
-NEXT
+i=2
+DO WHILE i<=n
+  IF res(i) THEN 
+    PRINT i
+  ELSE
+    PRINT i + "ne"
+  END IF
+  i = i +1
+LOOP
+
+
 
 
 

@@ -108,17 +108,23 @@ class ILInterpreter(ops: List[Op]) {
           }
         }
 
-        case JumpOp(target, pos) => labelsPointers.get(target) match {
-          case _ : Int => p = labelsPointers.get(target)
-          case _ => errorReport("runtime error", pos, "couldn't found label" + target)
+        case JumpOp(target, pos) => {
+            if (!labelsPointers.containsKey(target)) {
+              errorReport("runtime error", pos, "couldn't found label" + target)  
+            } else {
+              p = labelsPointers.get(target)
+            }
         }
 
         case JumpIfOp(pred, target, pos) 
                   => ExpressionInterpreter.eval(pred, context) match {
           case Error(s) => exprErrorReport(s)
-          case BooleanValue(v) => if (v) labelsPointers.get(target) match {
-            case _ : Int => p = labelsPointers.get(target)
-            case _ => errorReport("runtime error", pos, "couldn't found label" + target)
+          case BooleanValue(v) => {
+            if (!labelsPointers.containsKey(target)) {
+              errorReport("runtime error", pos, "couldn't found label" + target)  
+            } else if(v) {
+              p = labelsPointers.get(target)
+            }
           }
           case _ => errorReport("type error", pos, "required: boolean")
         }
@@ -126,9 +132,12 @@ class ILInterpreter(ops: List[Op]) {
         case JumpIfNotOp(pred, target, pos) 
                   => ExpressionInterpreter.eval(pred, context) match {
           case Error(s) => exprErrorReport(s)
-          case BooleanValue(v) => if (!v) labelsPointers.get(target) match {
-            case _ : Int => p = labelsPointers.get(target)
-            case _ => errorReport("runtime error", pos, "couldn't found label" + target)
+          case BooleanValue(v) => {
+            if (!labelsPointers.containsKey(target)) {
+              errorReport("runtime error", pos, "couldn't found label" + target)  
+            } else if(!v) {
+              p = labelsPointers.get(target)
+            }
           }
           case _ => errorReport("type error", pos, "required: boolean")
         }
