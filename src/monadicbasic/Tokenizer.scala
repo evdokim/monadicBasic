@@ -1,19 +1,18 @@
 package monadicbasic
 
 import scala.collection.mutable.ListBuffer
-import java.util.Scanner
 
 object Tokenizer {
 
   object CurrentTokenType extends Enumeration {
     type currentTokenTypeToken = Value
     val Undef, Word, Number, StringLiteral, NewLine, Op = Value
-  } 
+  }
 
-  def tokenize(in:List[Char]): Either[String, List[(Token, Pos)]] = {
+  def tokenize(in: List[Char]): Either[String, List[(Token, Pos)]] = {
     import CurrentTokenType._
 
-    var result:Either[String, List[(Token, Pos)]] = Left("")
+    var result: Either[String, List[(Token, Pos)]] = Left("")
     val resultList = new ListBuffer[(Token, Pos)]()
     val twoCharOp = Set("<=", "<>", ">=")
     var currentTokenType = Undef
@@ -23,12 +22,15 @@ object Tokenizer {
     var error = false
     var p = -1
 
-    def closeTocken {
+    def closeToken() {
       //println("close " + currentTokenType)
       val token = buffer.mkString
-      val resultToken:Token = currentTokenType match {
+      val resultToken: Token = currentTokenType match {
         case Number => NumberToken(token.toInt)
-        case Undef => {println("error"); WordToken("error")}
+        case Undef => {
+          println("error");
+          WordToken("error")
+        }
         case NewLine => NewLineToken
         case Word => WordToken(token.toLowerCase)
         case StringLiteral => StringLiteralToken(token)
@@ -46,22 +48,22 @@ object Tokenizer {
       currentTokenType = ctt
     }
 
-    def errorReport {
+    def errorReport() {
       error = true
-      result = Left("unexpected " + in(p) +" at line:" + curLine + " column: " + curColumn)
+      result = Left("unexpected " + in(p) + " at line: " + curLine + " column: " + curColumn)
     }
 
-    def errorReportDetailed(expected:String) {
+    def errorReportDetailed(expected: String) {
       error = true
-      result = Left("at line:" + curLine + " column: " + curColumn + " expected" +
-                    expected + " found: " + in(p))
+      result = Left("at line:" + curLine + " column: " + curColumn + " expected: " +
+        expected + " found: " + in(p))
     }
 
-    while (p < in.size-1 && !error) {
+    while (p < in.size - 1 && !error) {
       p += 1
       val c = in(p)
       c match {
-        case d if Character.isDigit(d) => {        
+        case d if Character.isDigit(d) => {
           currentTokenType match {
             case Undef => {
               openTocken(Number)
@@ -69,7 +71,7 @@ object Tokenizer {
             }
             case Number | StringLiteral | Word => buffer.append(d)
             case Op | NewLine => {
-              closeTocken
+              closeToken()
               openTocken(Number)
               buffer.append(d)
             }
@@ -83,33 +85,33 @@ object Tokenizer {
               buffer.append(c)
             }
             case Word | Number | NewLine => {
-              closeTocken
+              closeToken()
               openTocken(Op)
               buffer.append(c)
-            }           
+            }
             case Op => {
-              if(twoCharOp.contains(buffer.mkString + c)){
+              if (twoCharOp.contains(buffer.mkString + c)) {
                 buffer.append(c)
               } else {
-                closeTocken
+                closeToken()
                 openTocken(Op)
                 buffer.append(c)
-              } 
+              }
             }
             case StringLiteral => {
-              buffer.append(c)              
+              buffer.append(c)
             }
           }
-          curColumn += 1 
+          curColumn += 1
         }
 
         case '\n' => {
           currentTokenType match {
             case StringLiteral => errorReportDetailed("\"")
             case Undef => openTocken(NewLine)
-            case Op if buffer(0) != ')' => errorReportDetailed("operand")
+            case Op if (buffer(0) != ')' && buffer(0) != ':') => errorReportDetailed("operand")
             case Word | NewLine | Number | Op => {
-              closeTocken
+              closeToken()
               openTocken(NewLine)
             }
           }
@@ -119,10 +121,10 @@ object Tokenizer {
 
         case '"' => {
           currentTokenType match {
-            case Undef => openTocken(StringLiteral)           
-            case StringLiteral => closeTocken
-            case Op | Word | NewLine => {              
-              closeTocken
+            case Undef => openTocken(StringLiteral)
+            case StringLiteral => closeToken()
+            case Op | Word | NewLine => {
+              closeToken()
               openTocken(StringLiteral)
             }
             case Number => errorReportDetailed("number")
@@ -133,10 +135,10 @@ object Tokenizer {
         case ' ' | '\t' => {
           currentTokenType match {
             case StringLiteral => {
-              buffer.append(c)              
+              buffer.append(c)
             }
             case Undef => {}
-            case Op | Number | NewLine | Word => closeTocken
+            case Op | Number | NewLine | Word => closeToken()
           }
           curColumn += 1
         }
@@ -152,7 +154,7 @@ object Tokenizer {
             }
             case Number => errorReportDetailed("number")
             case Op | NewLine => {
-              closeTocken
+              closeToken()
               openTocken(Word)
               buffer.append(l)
             }
@@ -160,19 +162,22 @@ object Tokenizer {
           curColumn += 1
         }
 
-        case _ => errorReport
+        case c => currentTokenType match {
+          case StringLiteral => buffer.append(c)
+          case _ => errorReport()
+        }
       }
     }
     if (!error) {
       currentTokenType match {
         case StringLiteral => errorReportDetailed("\"")
         case other => {
-          closeTocken
+          closeToken()
         }
-      }      
+      }
     }
 
-    if(!error) {
+    if (!error) {
       Right(resultList.toList)
     } else {
       result

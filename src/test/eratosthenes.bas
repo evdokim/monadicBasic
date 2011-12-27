@@ -1,5 +1,7 @@
+0:
 DIM n AS Integer
-n = 100
+PRINT "input n:"
+INPUT n
 
 DIM res(n) AS Boolean
 
@@ -21,12 +23,14 @@ DO WHILE i<=n
   IF res(i) THEN 
     PRINT i
   ELSE
-    PRINT i + "ne"
+    PRINT "-"
   END IF
   i = i +1
 LOOP
 
-
-
-
-
+DIM s AS String
+PRINT "try again? (yes/no)"
+INPUT s
+IF s="yes" THEN
+  GOTO 0
+END IF

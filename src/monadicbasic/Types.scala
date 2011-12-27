@@ -1,45 +1,65 @@
 package monadicbasic
 
+
 sealed abstract class Value {
-	def typeName:String
+  def getType:TypeInfo
 }
 
-case class ArrayValue (value: Array[Value], typename:String) extends Value {
-	override def toString = "[" + value.foldLeft("")({(a,b) => a + " " + b}) + " ]"
-    override def typeName = "array[" + typename + "]"
+case class ArrayValue (value: Array[Value], typeInfo: TypeInfo) extends Value {
+  override def toString = "[" + value.foldLeft("")({(a,b) => a + " " + b}) + " ]"
+  override def getType = typeInfo
 }
 
 case class IntValue (value:Int) extends Value {
-	override def toString = value.toString
-	override def typeName = "integer"
+  override def toString = value.toString
+  override def getType = IntegerType
 } 
 
 case class StringValue (value:String) extends Value {
-	override def toString = value
-	override def typeName = "string"
-} 
+  override def toString = value
+  override def getType = StringType
+}
 
 case class BooleanValue (value:Boolean) extends Value {
-	override def toString = value.toString
-	override def typeName = "boolean"
+  override def toString = value.toString
+  override def getType = BooleanType
 }
 
 case class Error(message:String) extends Value {
-	override def typeName = "error"
+  override def toString = message
+  override def getType = ErrorType
 }
 
 
-object Types {
-	def getDefaultValue(typeName: String, pos:Pos):Value = typeName match {
-		case "integer" => IntValue(0)
-		case "string" => StringValue("")
-		case "boolean" => BooleanValue(true)
-		case s => Error("type error: " + "at " + pos + " unsupported type: " + s)
-	}
+sealed abstract class TypeInfo
+  case object IntegerType extends TypeInfo
+  case object BooleanType extends TypeInfo
+  case object StringType extends TypeInfo
+  case object ArrayType extends TypeInfo
+  case object ErrorType extends TypeInfo
 
-	def getDefaultArrayValue(typeName:String, size:Int, pos:Pos) =
-		ArrayValue(
-			new Array[Value](size).map({_ => getDefaultValue(typeName, pos)}),
-			typeName
-		)
+object Types {
+  val byNameMap = Map(
+    "integer" -> IntegerType,
+    "boolean" -> BooleanType,
+    "string" -> StringType,
+    "array" -> ArrayType,
+    "error" -> ErrorType
+  )
+
+  val defaultValues = Map[TypeInfo, Value](
+    IntegerType -> IntValue(0),
+    BooleanType -> BooleanValue(true),
+    StringType -> StringValue(""),
+    ArrayType -> Error("type error"),
+    ErrorType -> Error("type error")
+  )
+
+  def getDefaultValue(typeInfo: TypeInfo): Value = defaultValues(typeInfo)
+
+  def getDefaultArrayValue(typeInfo: TypeInfo, size: Int) =
+    ArrayValue(
+      new Array[Value](size).map({_ => getDefaultValue(typeInfo)}),
+      typeInfo
+    )
 }
